@@ -328,27 +328,6 @@ npm run dev -- -p 3001
 
 ---
 
-## 📦 Deployment
-
-### Deploy to Vercel (Recommended)
-\`\`\`bash
-npm run build
-# Push to GitHub
-git push origin main
-\`\`\`
-Then connect your GitHub repo to Vercel:
-1. Go to [vercel.com](https://vercel.com)
-2. Import your GitHub repository
-3. Click Deploy
-4. Your app is live!
-
-### Deploy to Other Platforms
-- **Netlify**: Drag and drop the `out` folder after `npm run build`
-- **Railway**: Connect GitHub repo directly
-- **Heroku**: Push with git to Heroku remote
-
----
-
 ## 📞 Support & Questions
 
 For issues or questions:
