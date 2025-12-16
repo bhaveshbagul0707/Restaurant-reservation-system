@@ -42,6 +42,12 @@ Home Page
 Table Booking process
 <img width="2164" height="1176" alt="image" src="https://github.com/user-attachments/assets/26695424-e86a-4f09-82bd-805a393f0aea" />
 
+Feedback Page
+<img width="1920" height="1080" alt="Screenshot 2025-12-16 153044" src="https://github.com/user-attachments/assets/058a9dc6-b26c-42e6-8ad6-f35141a4c93a" />
+
+Admin View Feedback
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c54cb41e-bdc7-4c2a-9d81-8063bcd7c5f0" />
+
 Admin Login Page 
 <img width="755" height="783" alt="image" src="https://github.com/user-attachments/assets/43c583b9-fbf6-472c-bd8e-e594608d15b1" />
 
@@ -176,6 +182,9 @@ restaurant-reservation-system/
 - See your booking details with checkmark
 - Confirmation email info (demo doesn't send real emails)
 - Click "Back to Home" to return
+  
+**Give Feedback of service**
+-a coustomer can give feedback about the restaruent
 
 ---
 
@@ -192,6 +201,7 @@ restaurant-reservation-system/
 - **Total Bookings**: All reservations across all time
 - **Today's Bookings**: Only reservations for today
 - **Total Guests Booked**: Sum of all guest counts
+- **View Feedback**: Feedback given by cousomer can we view by admin
 - **Available Tables**: Restaurant capacity (always 6)
 
 **Manage Bookings**
