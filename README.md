@@ -52,7 +52,7 @@ Admin Login Page
 <img width="755" height="783" alt="image" src="https://github.com/user-attachments/assets/43c583b9-fbf6-472c-bd8e-e594608d15b1" />
 
 Admin Dashbord
-<img width="1383" height="732" alt="image" src="https://github.com/user-attachments/assets/efba411f-66c9-4ffb-b26b-b322e1101b23" />
+<img width="1920" height="1080" alt="Screenshot 2025-12-16 153122" src="https://github.com/user-attachments/assets/c3b56a58-0a3b-4252-adfa-59cfbe0eb331" />
 
 
 
