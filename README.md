@@ -1,6 +1,6 @@
 # 🍽️ Restaurant Reservation & Table Booking System
 
-A modern, simple, and fully functional restaurant table reservation system built with Next.js, React, and Tailwind CSS. No database required - uses localStorage for data persistence.
+A restaurant reservation application built with Next.js, React, and Tailwind CSS. Reservations and admin credentials are stored in Supabase PostgreSQL, with server-side booking validation and cancellation-notification delivery tracking.
 
 ---
 
@@ -9,9 +9,9 @@ A modern, simple, and fully functional restaurant table reservation system built
 This is a complete end-to-end restaurant reservation system with:
 - **Customer Booking Interface**: Easy 3-step booking process
 - **Admin Dashboard**: Manage all reservations and view statistics
-- **Admin Authentication**: Secure login with demo password
-- **Real-time Availability**: Tables show as booked/available instantly
-- **Data Persistence**: All bookings saved to browser localStorage
+- **Admin Authentication**: Server-validated password and signed, HTTP-only session cookie
+- **Shared Availability**: Server-backed table availability shared across devices
+- **Data Persistence**: Reservations, admin credentials, and notification attempts saved in Supabase PostgreSQL
 
 ---
 
@@ -20,14 +20,14 @@ This is a complete end-to-end restaurant reservation system with:
 ### Customer Features
 ✅ **Easy Date Selection** - Pick any date from tomorrow up to 30 days in advance  
 ✅ **Time Slot Selection** - Choose from 11:00 AM to 10:00 PM in 30-minute intervals  
-✅ **Party Size Selection** - Select 1-10 guests with easy increment/decrement buttons  
+✅ **Party Size Selection** - Select 1-6 guests, with table capacity validation
 ✅ **Interactive Table Selection** - Visual table grid showing capacity and availability  
 ✅ **Real-time Availability** - Tables automatically update based on selected date/time  
 ✅ **Instant Confirmation** - Get booking details immediately after reservation  
 ✅ **Progress Indicator** - Clear 3-step progress tracker  
 
 ### Admin Features
-✅ **Secure Login** - Password-protected dashboard (demo: `admin123`)  
+✅ **Admin Login** - Password configured with server-only environment variables
 ✅ **Dashboard Stats** - View total bookings, today's bookings, guest count, table capacity  
 ✅ **Bookings Table** - Complete list of all reservations with guest details  
 ✅ **Filter by Date** - Search bookings by specific date  
@@ -78,7 +78,7 @@ restaurant-reservation-system/
 
 ---
 
-## 🗄️ Database Schema (localStorage)
+## 🗄️ Database Schema (Supabase PostgreSQL)
 
 ### Bookings Data Structure
 \`\`\`javascript
@@ -89,8 +89,9 @@ restaurant-reservation-system/
   phone: string,        // Guest phone number
   date: string,         // YYYY-MM-DD format
   time: string,         // HH:MM format (24-hour)
-  guests: number,       // 1-10 guests
-  tableNumber: number   // 1-6 (table ID)
+  guests: number,       // 1-6 guests
+  tableNumber: number,  // 1-6 (table ID)
+  smsConsent: boolean   // Guest opt-in for transactional SMS
 }
 \`\`\`
 
@@ -131,18 +132,38 @@ restaurant-reservation-system/
    pnpm install
    \`\`\`
 
-#### 4. **Start Development Server**
+#### Local demo mode (no Supabase credentials)
+When you run `npm run dev` without `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`, the app uses a development-only local store instead of failing. You can check availability, create and cancel reservations, and sign into the admin dashboard. Data is saved in `.data/local-demo.json` on this computer; it is not shared with other devices, and email/SMS are not sent. The app labels this mode in the booking and admin screens.
+
+This local store is intentionally disabled in production. Configure Supabase before deploying or accepting real reservations.
+
+#### 4. **Create and configure Supabase**
+Create a Supabase project and run the SQL from `supabase/migrations/202609280001_initial_reservations.sql` in the Supabase SQL Editor. Copy the project URL and **service role** key into the private `.env.local` file. Never put the service role key in a `NEXT_PUBLIC_` variable or commit it.
+
+#### 5. **Configure admin login**
+Set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, and `CRON_SECRET` in `.env.local`. Use a unique password and generate separate random values for the session and cron secrets with:
+
+\`\`\`bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+\`\`\`
+
+The first server login initializes the admin account in Supabase using a salted password hash. Later changes from the admin dashboard persist in Supabase and take precedence over `.env.local`. Vercel scheduled notifications require a Vercel plan that supports cron jobs; on other hosts, schedule an authenticated GET to `/api/cron/notifications` every five minutes, with `Authorization: Bearer <CRON_SECRET>`.
+
+#### 6. **Configure cancellation notifications**
+For email, set `RESEND_API_KEY` and a verified `RESEND_FROM_EMAIL`. For SMS, set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER`. Keep keys in `.env.local`, never share them in chat or commit them. Guests receive SMS only if they explicitly opt in and enter a phone number in international format. Reservation confirmation and cancellation notices are tracked in the database outbox, and failed deliveries can be retried from the dashboard or scheduled worker.
+
+#### 7. **Start Development Server**
    \`\`\`bash
    npm run dev
    # or
    pnpm dev
    \`\`\`
 
-#### 5. **Open in Browser**
+#### 8. **Open in Browser**
    - Go to: `http://localhost:3000`
    - Your app is now running! 🎉
 
-#### 6. **Build for Production**
+#### 9. **Build for Production**
    \`\`\`bash
    npm run build
    npm start
@@ -180,7 +201,7 @@ restaurant-reservation-system/
 
 **Confirmation Page**
 - See your booking details with checkmark
-- Confirmation email info (demo doesn't send real emails)
+- See the current email and opted-in SMS confirmation delivery status
 - Click "Back to Home" to return
   
 **Give Feedback of service**
@@ -192,8 +213,12 @@ restaurant-reservation-system/
 
 **Login to Admin Panel**
 1. Go to `http://localhost:3000/admin`
-2. Enter password: `admin123`
+2. Enter the `ADMIN_PASSWORD` configured in `.env.local`
 3. Click "Login to Dashboard"
+
+Set `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in the project root `.env.local` as described above. The default initial admin ID is `admin`. Never commit `.env.local` or share credentials.
+
+After signing in, use **Change admin ID & password** on the dashboard to update your credentials. The current password is required, and the new password must have at least 12 characters. Credentials are stored as salted password hashes in Supabase and remain changed after server restarts.
 
 **Admin Dashboard Features**
 
@@ -210,6 +235,9 @@ restaurant-reservation-system/
 3. **Clear Filter**: Remove date filter to see all bookings again
 4. **Cancel Booking**: Click "Cancel" button to remove a reservation
 5. **Confirm Cancellation**: A popup asks for confirmation before deleting
+6. **Guest Notifications**: On cancellation, the server attempts to email the guest and sends an SMS only when the guest opted in. Delivery status is shown in the dashboard.
+
+To enable email and SMS, copy the Resend and Twilio values from `.env.example` into your private `.env.local`. Verify your sender address with Resend. For SMS, use an active Twilio sender and enter guest phone numbers in international E.164 format (for example `+14155552671`). SMS consent is collected on the booking form; guests who do not opt in will not receive SMS. Providers may charge for messages.
 
 **Table Display**
 - Name, Email, Phone - Guest contact information
@@ -236,46 +264,29 @@ The application uses a professional **Amber/Orange** color palette:
 ## 💾 Data Persistence
 
 ### How It Works
-- All bookings are stored in **browser localStorage**
-- Data persists between page refreshes and browser sessions
-- Each device has its own separate data
-- Clearing browser cache will delete all bookings
+- Reservations are stored in Supabase PostgreSQL and shared across browsers and devices.
+- The database enforces one active reservation per table and time slot, including concurrent booking attempts.
+- Admin passwords are stored as salted scrypt hashes, not plaintext.
+- Reservation confirmation/cancellation and notification delivery attempts are stored in a database outbox for retry and auditing.
+- Existing `restaurant_bookings` data in old browsers remains local; import it deliberately before removing the old app.
+- Availability refreshes while guests are choosing a table, and the database remains authoritative at confirmation.
+- Complete the Supabase project and provider-secret setup above before running booking/admin API routes; missing configuration is reported instead of silently storing browser-only data.
 
-### Storage Key
-\`\`\`
-restaurant_bookings
-\`\`\`
-
-### Example localStorage Data
-\`\`\`json
-[
-  {
-    "id": "1731234567890",
-    "name": "John Doe",
-    "email": "john@example.com",
-    "phone": "+1 (555) 000-0000",
-    "date": "2025-11-25",
-    "time": "19:00",
-    "guests": 4,
-    "tableNumber": 3
-  }
-]
-\`\`\`
+Admin login uses a signed HTTP-only session cookie. Supabase, `ADMIN_PASSWORD`, and `ADMIN_SESSION_SECRET` must be configured on the server.
 
 ---
 
 ## 🔐 Security Notes
 
-**Important:** This is a demo application with basic authentication.
+**Important:** Production deployment must use HTTPS, restrict and rotate service-role/provider secrets, configure rate limits and backups, and establish privacy/retention policies appropriate to the restaurant's location.
 
-⚠️ **For Production Use:**
-- Replace localStorage with a real database (PostgreSQL, MongoDB, etc.)
-- Implement proper authentication (JWT tokens, OAuth, etc.)
-- Use secure password hashing (bcrypt, etc.)
-- Add input validation and sanitization
-- Implement rate limiting
-- Add email verification
-- Use environment variables for sensitive data
+⚠️ **Before public production deployment:**
+- Add edge/WAF rate limits to login and public booking endpoints.
+- Enable verified sender/domain settings and provider-side delivery webhooks; provider acceptance is not proof of delivery.
+- Set up Supabase point-in-time recovery/backups, monitoring, and key rotation.
+- Publish privacy, retention, SMS-consent, opt-out, and cancellation policies.
+- Import legacy reservations deliberately and verify the deployment migration before opening bookings.
+- Run scheduled notification processing on a supported host, and add monitoring/alerts for exhausted notification retries.
 
 ---
 
@@ -286,7 +297,7 @@ restaurant_bookings
 - **Styling**: Tailwind CSS v4
 - **Components**: Shadcn UI
 - **State Management**: React hooks (useState, useEffect)
-- **Storage**: Browser localStorage
+- **Storage**: Supabase PostgreSQL
 - **Type Safety**: TypeScript
 
 ---
@@ -307,7 +318,7 @@ restaurant_bookings
 - `getMaxDate()` - Returns 30 days from today
 - `getAvailableTimes()` - Returns 11:00 AM to 10:00 PM slots
 - `handleSelectTable()` - Selects/validates table
-- `handleConfirmBooking()` - Saves booking to localStorage
+- `handleConfirmBooking()` - Creates a reservation through the server API and atomic database function
 
 **State:**
 - `step` - Current step (1, 2, or 3)
@@ -315,7 +326,7 @@ restaurant_bookings
 - `guestCount` - Number of guests
 - `availableTables` - Table availability
 - `selectedTable` - Chosen table
-- `bookings` - All bookings from localStorage
+- `bookings` - Reservations fetched from the authenticated server API
 - `bookingConfirmed` - Confirmation flag
 
 #### `app/admin/page.tsx` - Admin Dashboard
@@ -336,13 +347,13 @@ restaurant_bookings
 ## 🐛 Troubleshooting
 
 ### Issue: Bookings not saving
-**Solution:** Check if localStorage is enabled in browser settings. Private/Incognito mode may not support localStorage.
+**Solution:** Confirm that `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set and the SQL migration has been applied in the selected Supabase project.
 
-### Issue: Admin password not working
-**Solution:** Ensure caps lock is off. Default password is `admin123` (lowercase).
+### Issue: Admin login is unavailable
+**Solution:** Set the Supabase URL/service-role key and the `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, and `CRON_SECRET` values in `.env.local`, then restart the server. Never commit `.env.local` or share credentials.
 
-### Issue: Tables show as always available
-**Solution:** Refresh the page. Select date and time first to see availability.
+### Issue: Availability cannot load
+**Solution:** Confirm the migration ran successfully and the server has working Supabase service-role credentials. Availability is read from the shared database.
 
 ### Issue: Port 3000 already in use
 **Solution:** 
@@ -359,7 +370,7 @@ For issues or questions:
 1. Check the Troubleshooting section above
 2. Review the code comments in the files
 3. Test in browser DevTools (F12)
-4. Check localStorage in DevTools → Application tab
+4. Check Supabase logs and the dashboard's notification delivery status
 
 ---
 
